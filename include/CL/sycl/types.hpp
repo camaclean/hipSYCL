@@ -35,6 +35,7 @@
 #include <memory>
 #include <exception>
 #include <mutex>
+#include <shared_mutex>
 
 namespace cl {
 namespace sycl {
@@ -55,6 +56,10 @@ using function_class = std::function<Func>;
 
 #ifndef CL_SYCL_NO_STD_MUTEX
 using mutex_class = std::mutex;
+#endif
+
+#ifndef CL_SYCL_NO_STD_SHARED_MUTEX
+using shared_mutex_class = std::shared_timed_mutex;
 #endif
 
 #ifndef CL_SYCL_NO_STD_UNIQUE_PTR

@@ -51,7 +51,7 @@ public:
       const accessor_base* accessor_ptr,
       buffer_ptr buff)
   {
-    std::lock_guard<mutex_class> lock{_lock};
+    std::unique_lock<shared_mutex_class> lock{_lock};
 
     const void* object_ptr = reinterpret_cast<const void*>(accessor_ptr);
     assert(_buffer_map.find(object_ptr) ==
@@ -64,7 +64,7 @@ public:
       const accessor_base* accessor_ptr,
       buffer_ptr buff)
   {
-    std::lock_guard<mutex_class> lock{_lock};
+    std::unique_lock<shared_mutex_class> lock{_lock};
 
     const void* object_ptr = reinterpret_cast<const void*>(accessor_ptr);
     assert(_buffer_map.find(object_ptr) !=
@@ -76,7 +76,7 @@ public:
   void release_accessor(
       const accessor_base* accessor_ptr)
   {
-    std::lock_guard<mutex_class> lock{_lock};
+    std::unique_lock<shared_mutex_class> lock{_lock};
 
     const void* object_ptr = reinterpret_cast<const void*>(accessor_ptr);
     assert(_buffer_map.find(object_ptr) !=
@@ -88,6 +88,8 @@ public:
   buffer_ptr find_accessor(
       const accessor_base* accessor_ptr) const
   {
+    std::shared_lock<shared_mutex_class> lock(_lock);
+
     const void* object_ptr = reinterpret_cast<const void*>(accessor_ptr);
     auto it = _buffer_map.find(object_ptr);
 
@@ -98,7 +100,7 @@ public:
   }
 
 private:
-  mutex_class _lock;
+  mutable shared_mutex_class _lock;
   std::unordered_map<const void*, buffer_ptr> _buffer_map;
 };
 
