@@ -55,7 +55,66 @@ namespace detail {
 
 namespace dispatch {
 
+// Kernels work slightly differently than normal functions. When a
+// kernel is executed on an accellerator, the parameters are treated
+// as shared constants. They need to be copied into device memory.
+// These should not be reference-passed parameters.
+//
+// When running as functions on the CPU, each invocation results in a
+// copy of the Function. This causes lambda value captures to be copied,
+// which can be very expensive. On the CPU, use references.
+#ifdef HIPSYCL_PLATFORM_CPU
+template<class Function>
+void single_task_kernel(Function&& f)
+{
+  f();
+}
 
+template<int dimensions, class Function>
+void parallel_for_kernel(Function&& f,
+                         const sycl::range<dimensions>& execution_range)
+{
+  item<dimensions, false> this_item;
+  if(this_item.get_linear_id() < execution_range.size())
+    f(this_item);
+}
+
+template<int dimensions, class Function>
+void parallel_for_kernel_with_offset(Function&& f,
+                                     const sycl::range<dimensions>& execution_range,
+                                     const id<dimensions>& offset)
+{
+  item<dimensions> this_item{offset};
+
+  bool item_is_in_range = true;
+  for(int i = 0; i < dimensions; ++i)
+  {
+    if(this_item.get_id(i) >= offset.get(i) + execution_range.get(i))
+    {
+      item_is_in_range = false;
+      break;
+    }
+  }
+
+  if(item_is_in_range)
+    f(this_item);
+}
+
+template<int dimensions, class Function>
+void parallel_for_ndrange_kernel(Function&& f, const id<dimensions>& offset)
+{
+  nd_item<dimensions> this_item{&offset};
+  f(this_item);
+}
+
+template<int dimensions, class Function>
+void parallel_for_workgroup(Function&& f,
+                            const sycl::range<dimensions>& work_group_size)
+{
+  group<dimensions> this_group;
+  f(this_group);
+}
+#else
 template<class Function>
 __global__ void single_task_kernel(Function f)
 {
@@ -106,6 +165,7 @@ __global__ void parallel_for_workgroup(Function f,
   group<dimensions> this_group;
   f(this_group);
 }
+#endif
 
 } // dispatch
 } // detail
